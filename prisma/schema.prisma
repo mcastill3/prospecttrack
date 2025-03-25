@@ -1,0 +1,313 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id          String @id @default(uuid())
+  username    String @unique
+  clerkUserId String @unique
+}
+
+model Task {
+  id          String     @id @default(uuid())
+  description String
+  status      TaskStatus @default(TO_DO)
+  dueDate     DateTime?
+  campaignId  String?
+  eventId     String?
+  playerId    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  campaign    Campaign?  @relation(fields: [campaignId], references: [id])
+  event       Event?     @relation(fields: [eventId], references: [id])
+  player      Player?    @relation(fields: [playerId], references: [id])
+}
+
+model Player {
+  id          String       @id @default(uuid())
+  username    String       @unique
+  name        String
+  surname     String
+  email       String       @unique
+  phone       String?
+  department  String?
+  img         String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  cityId      String?
+  clerkUserId String       @unique
+  countryId   String
+  sex         Sex
+  role        PlayerRole
+  ads         Ad[]
+  reactions   AdReaction[]
+  city        City?        @relation(fields: [cityId], references: [id])
+  country     Country      @relation(fields: [countryId], references: [id])
+  tasks       Task[]
+  campaigns   Campaign[]   @relation("CampaignPlayers")
+  events      Event[]      @relation("EventPlayers")
+  leads       Lead[]       @relation("LeadPlayers")
+}
+
+model Country {
+  id      String   @id @default(uuid())
+  name    String   @unique
+  cities  City[]
+  players Player[]
+}
+
+model City {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  countryId String
+  country   Country  @relation(fields: [countryId], references: [id])
+  players   Player[]
+}
+
+model Company {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  industry String    @default("Unknown") // Evitar valores nulos
+  size     Int
+  country  String
+  city     String
+  status   CompanyStatus @default(ACTIVE)
+  contacts Contact[]
+  leads    Lead[]
+
+  @@index([industry]) // Índice para mejorar consultas por industria
+}
+
+model Partner {
+  id        String     @id @default(uuid())
+  name      String
+  country   String
+  city      String
+  industry  String?
+  contacts  Contact[]
+  campaigns Campaign[] @relation("CampaignToPartner")
+  events    Event[]    @relation("EventToPartner")
+}
+
+model Lead {
+  id         String     @id @default(uuid())
+  name       String
+  contactId  String?
+  companyId  String?
+  campaignId String?
+  eventId    String?
+  status     LeadStatus @default(NEW) // Asegurar que OPEN esté bien definido
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  currency   String?    @default("EUR") @db.VarChar(3)
+  value      Float?     @default(0)
+  countryId  String?
+  cityId     String?
+  campaign   Campaign?  @relation(fields: [campaignId], references: [id])
+  company    Company?   @relation(fields: [companyId], references: [id])
+  contact    Contact?   @relation(fields: [contactId], references: [id])
+  event      Event?     @relation(fields: [eventId], references: [id])
+  players    Player[]   @relation("LeadPlayers")
+  prospectTracking  ProspectTracking[] // Relación inversa
+
+  @@index([status, companyId]) // Índice para mejorar consultas por estado e industria
+}
+
+model Contact {
+  id        String     @id @default(uuid())
+  name      String
+  email     String     @unique
+  phone     String?
+  role      String?
+  type      String?
+  status    String?
+  companyId String?
+  partnerId String?
+  company   Company?   @relation(fields: [companyId], references: [id])
+  partner   Partner?   @relation(fields: [partnerId], references: [id])
+  leads     Lead[]
+  campaigns Campaign[] @relation("CampaignContacts")
+  events    Event[]    @relation("EventContacts")
+}
+
+model Campaign {
+  id             String          @id @default(uuid())
+  name           String
+  type           CampaignType
+  date           DateTime
+  status         ExecutionStatus @default(TO_DO)
+  targetContacts Int?
+  impressions    Int?
+  clicks         Int?
+  conversions    Int?
+  costId         String?
+  endtime        DateTime?       @db.Timestamp(6)
+  cost           Cost?           @relation("CampaignCost", fields: [costId], references: [id])
+  leads          Lead[]
+  tasks          Task[]
+  contacts       Contact[]       @relation("CampaignContacts")
+  players        Player[]        @relation("CampaignPlayers")
+  sponsors       Partner[]       @relation("CampaignToPartner")
+}
+
+model Event {
+  id                 String          @id @default(uuid())
+  name               String
+  type               EventType
+  date               DateTime
+  status             ExecutionStatus @default(TO_DO)
+  targetAttendees    Int?
+  confirmedAttendees Int?
+  costId             String?
+  endtime            DateTime?       @db.Timestamp(6)
+  cost               Cost?           @relation("EventCost", fields: [costId], references: [id])
+  leads              Lead[]
+  tasks              Task[]
+  contacts           Contact[]       @relation("EventContacts")
+  players            Player[]        @relation("EventPlayers")
+  sponsors           Partner[]       @relation("EventToPartner")
+}
+
+model Cost {
+  id       String       @id @default(uuid())
+  amount   Float
+  type     CampaignType
+  currency Currency
+  campaign Campaign[]   @relation("CampaignCost")
+  event    Event[]      @relation("EventCost")
+}
+
+model Ad {
+  id        String       @id @default(uuid())
+  title     String
+  content   String
+  authorId  String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  author    Player       @relation(fields: [authorId], references: [id])
+  reactions AdReaction[]
+}
+
+model AdReaction {
+  id        String       @id @default(uuid())
+  adId      String
+  playerId  String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+  ad        Ad           @relation(fields: [adId], references: [id])
+  player    Player       @relation(fields: [playerId], references: [id])
+}
+
+enum Currency {
+  EUR
+  USD
+  MXN
+}
+
+enum ExecutionStatus {
+  TO_DO
+  IN_PROGRESS
+  DONE
+}
+
+enum PlayerRole {
+  DIRECTOR_COMERCIAL
+  DIRECTOR_MARKETING
+  ANALISTA_COMERCIAL
+  ANALISTA_MARKETING
+  DIGITAL_SALES
+}
+
+enum TaskStatus {
+  TO_DO
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum CampaignType {
+  EMAIL
+  SOCIAL_MEDIA
+  WEBINAR
+  EVENT
+  PARTNER_ACTIVITY
+}
+
+enum EventType {
+  CONFERENCE
+  WORKSHOP
+  MEETUP
+}
+
+enum LeadStatus {
+  NEW
+  OPEN
+  CONTACTED
+  QUALIFIED
+  CLOSED
+  LOST
+}
+
+enum AdStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AdCategory {
+  GENERAL
+  OFFER
+  EVENT
+  NEWS
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+enum currency {
+  EUR
+  USD
+  MXN
+}
+
+enum playerrole {
+  Director_Comercial
+  Director_Marketing
+  Analista_Comercial
+  Analista_Marketing
+  Digital_Sales
+}
+
+model ProspectTracking {
+  id        String    @id @default(uuid())
+  leadId    String
+  status    LeadStatus
+  notes     String?   // Comentarios opcionales
+  updatedBy String    // ID del usuario que hizo la actualización
+  updatedAt DateTime  @default(now())
+
+  lead      Lead      @relation(fields: [leadId], references: [id])
+}
+
+enum CompanyStatus {
+  ACTIVE
+  RISKY
+  INACTIVE
+}
