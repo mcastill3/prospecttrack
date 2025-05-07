@@ -1,26 +1,26 @@
-# Use Node.js as the base image
+# Usa Node.js como imagen base
 FROM node:18
 
-# Set the working directory inside the container
-    WORKDIR /app
+# Establece el directorio de trabajo
+WORKDIR /app
 
-# Copy the package.json and package-lock.json files
+# Copia solo los archivos de dependencias primero (mejor caché)
 COPY package*.json ./
 
-# Install dependencies
+# Instala dependencias
 RUN npm install
 
-# Copy the rest of the application Code
+# Copia el resto del código fuente
 COPY . .
 
-# Generate Database
-RUN npx prisma migrate dev --name init
+# Asegura que Prisma esté configurado para producción
+RUN npx prisma generate
 
-# Build the Next.js application
+# Compila la app de Next.js
 RUN npm run build
 
-# Expose the port the app runs on
+# Expone el puerto en el que corre la app
 EXPOSE 3000
 
-# Start the Next.js application
+# Inicia la aplicación
 CMD ["npm", "start"]

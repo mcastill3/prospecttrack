@@ -124,9 +124,6 @@ const pipelineAmount = totalPipeline._sum.value || 0;
                            className="w-36 h-36 rounded-full object-cover border-4 border-white mr-16"
                         />
                      </div>
-
-                   
-                     
                   </div>
                </div>
 
@@ -175,12 +172,12 @@ const pipelineAmount = totalPipeline._sum.value || 0;
 
             {/* BOTTOM */}
             <div className="mt-4 bg-white rounded-md p-4 h-[920px]">
-            <div className="mb-6">
-               <TablePlayerCampaigns playerId={id} />
-            </div>
-            <div>
-               <TablePlayerLeads playerId={id} />
-            </div>
+               <div className="mb-6">
+                  <TablePlayerCampaigns playerId={id} />
+               </div>
+               <div>
+                  <TablePlayerLeads playerId={id} />
+               </div>
             </div>            
          </div>
 
