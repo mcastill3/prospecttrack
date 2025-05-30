@@ -1,21 +1,16 @@
-import { PrismaClient } from "@prisma/client";
 import classNames from "classnames";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
+import { Button } from "./ui/button";
+import { Lead, AccountManager, Company } from "@prisma/client";
 
-const prisma = new PrismaClient();
+// Define el tipo de Lead con relaciones necesarias
+type LeadWithRelations = Lead & {
+  accountManager: Pick<AccountManager, "firstName" | "lastName"> | null;
+  company: Pick<Company, "name" | "sector"> | null;
+};
 
-const getLeadsAtRiskFromDatabase = async () => {
-  const now = new Date();
-  const fiveDaysAgo = new Date(now);
-  fiveDaysAgo.setDate(now.getDate() - 5);
-  const tenDaysAgo = new Date(now);
-  tenDaysAgo.setDate(now.getDate() - 10);
-
-  return await prisma.lead.findMany({
-    where: { status: { notIn: ["CLOSED"] } },
-    orderBy: { updatedAt: "asc" },
-    take: 5,
-    include: { company: true },
-  });
+type LeadsAtRiskProps = {
+  leads: LeadWithRelations[];
 };
 
 const formatCurrency = (value: number) => {
@@ -28,65 +23,78 @@ const formatCurrency = (value: number) => {
 
 const getRiskLevel = (updatedAt: Date) => {
   const now = new Date();
-  const daysDifference = Math.floor((now.getTime() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24));
+  const daysDifference = Math.floor(
+    (now.getTime() - new Date(updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+  );
 
-  if (daysDifference > 10) return { label: "Alto", color: "bg-red-600 text-white animate-pulse" };
-  if (daysDifference > 5) return { label: "Moderado", color: "bg-yellow-500 text-black" };
-  return { label: "Bajo", color: "bg-green-500 text-white" };
+  if (daysDifference > 10) return { label: "High", color: "bg-red-600 text-white animate-pulse" };
+  if (daysDifference > 5) return { label: "Medium", color: "bg-yellow-500 text-black" };
+  return { label: "Low", color: "bg-green-500 text-white" };
 };
 
-const LeadsAtRisk = async () => {
-  const leads = await getLeadsAtRiskFromDatabase();
+const LeadsAtRisk = ({ leads }: LeadsAtRiskProps) => {
   const totalValueAtRisk = leads.reduce((sum, lead) => sum + (lead.value || 0), 0);
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg border min-h-[30vh] flex flex-col">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">Leads en Riesgo</h2>
-
+      {/* Header Info Box */}
       <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-4 flex justify-between items-center shadow">
-        <span className="text-lg font-semibold">Total en Riesgo:</span>
+        <span className="text-lg font-semibold">Estimated value at risk:</span>
         <span className="text-xl font-bold">{formatCurrency(totalValueAtRisk)}</span>
       </div>
 
-      <div className="overflow-x-auto flex-grow">
-        <table className="min-w-full text-sm text-gray-800">
-          <thead className="bg-gray-900 text-white">
-            <tr>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Lead</th>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Empresa</th>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Industria</th>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Última Actualización</th>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Valor (€)</th>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Riesgo</th>
-              <th className="py-3 px-4 text-left font-semibold uppercase">Acción</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-300">
-            {leads.map((lead) => {
-              const risk = getRiskLevel(lead.updatedAt);
-              return (
-                <tr key={lead.id} className="hover:bg-gray-50">
-                  <td className="py-3 px-4">{lead.name}</td>
-                  <td className="py-3 px-4">{lead.company?.name || "N/A"}</td>
-                  <td className="py-3 px-4">{lead.company?.industry || "Desconocida"}</td>
-                  <td className="py-3 px-4">{new Date(lead.updatedAt).toISOString().split("T")[0]}</td>
-                  <td className="py-3 px-4 font-semibold">{formatCurrency(lead.value || 0)}</td>
-                  <td className="py-3 px-4">
-                    <span className={classNames("px-3 py-1 rounded-md font-semibold", risk.color)}>
-                      {risk.label}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
-                      Contactar
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Table */}
+      <Table className="min-w-full border-collapse">
+        <TableHeader className="bg-gray-900 text-white font-semibold">
+          <TableRow>
+            <TableHead className="py-4 px-6 text-left text-white">Lead</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Company</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Sector</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Account Manager</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Last Update</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Estimated Value (€)</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Risk</TableHead>
+            <TableHead className="py-4 px-6 text-left text-white">Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {leads.map((lead) => {
+            const risk = getRiskLevel(lead.updatedAt);
+            return (
+              <TableRow key={lead.id} className="hover:bg-gray-300">
+                <TableCell className="py-4 px-6 text-left text-xs">{lead.name}</TableCell>
+                <TableCell className="py-4 px-6 text-left text-xs">
+                  {lead.company?.name || "N/A"}
+                </TableCell>
+                <TableCell className="py-4 px-6 text-left text-xs">
+                  {lead.company?.sector ? lead.company.sector.replace(/_/g, " ") : "Desconocida"}
+                </TableCell>
+                <TableCell className="py-4 px-6 text-left text-xs">
+                  {lead.accountManager
+                    ? `${lead.accountManager.firstName} ${lead.accountManager.lastName}`
+                    : "Marketing - TBA"}
+                </TableCell>
+                <TableCell className="py-4 px-6 text-left text-xs">
+                  {new Date(lead.updatedAt).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="py-4 px-6 text-left text-xs">
+                  {formatCurrency(lead.value || 0)}
+                </TableCell>
+                <TableCell>
+                  <span className={classNames("px-3 py-1 rounded-md font-semibold", risk.color)}>
+                    {risk.label}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <Button variant="default" size="sm">
+                    Contact
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
   );
 };

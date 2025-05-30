@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma'
 import Link from 'next/link'
 
 const CountChartContainer = async() => {
-    const campaigns = await prisma.campaign.count()
+    const campaigns = await prisma.activity.count()
 
     const leads = await prisma.lead.count()
     

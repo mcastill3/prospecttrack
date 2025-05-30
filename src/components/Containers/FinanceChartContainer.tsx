@@ -11,7 +11,7 @@ type MonthlyCostData = {
 
 export const getCostsByMonth = async (): Promise<MonthlyCostData[]> => {
   // Obtener los costos de las campañas
-  const campaigns = await prisma.campaign.findMany({
+  const campaigns = await prisma.activity.findMany({
     where: {
       date: {
         gte: new Date("2025-01-01"),
@@ -27,22 +27,7 @@ export const getCostsByMonth = async (): Promise<MonthlyCostData[]> => {
     },
   });
 
-  // Obtener los costos de los eventos
-  const events = await prisma.event.findMany({
-    where: {
-      date: {
-        gte: new Date("2025-01-01"),
-      },
-    },
-    select: {
-      date: true,
-      cost: {
-        select: {
-          amount: true,
-        },
-      },
-    },
-  });
+  
 
   // Agrupar los costos por mes y sumarlos
   const monthlyCosts: Record<string, number> = {};
@@ -58,16 +43,7 @@ export const getCostsByMonth = async (): Promise<MonthlyCostData[]> => {
     monthlyCosts[month] += cost;
   });
 
-  // Agregar los costos de los eventos
-  events.forEach((event) => {
-    const month = event.date.toISOString().substring(0, 7); // "YYYY-MM"
-    const cost = event.cost?.amount ?? 0;
-
-    if (!monthlyCosts[month]) {
-      monthlyCosts[month] = 0;
-    }
-    monthlyCosts[month] += cost;
-  });
+  
 
   // Convertir a array y ordenar por mes
   const result = Object.entries(monthlyCosts)
@@ -84,16 +60,10 @@ const FinanceChartContainer = async () => {
   const monthlyData = await getCostsByMonth();
 
   return (
-    <div className="rounded-xl w-full h-full bg-white p-4">
+    <div className="rounded-xl w-full h-[350px] bg-white p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-lg font-semibold ml-2">Monthly Propsection Costs - €</h1>
-        <Image
-          src="/moreDark.png"
-          alt="More options"
-          width={20}
-          height={20}
-          className="cursor-pointer mr-2"
-        />
+        
       </div>
       <FinanceChart data={monthlyData} />
     </div>

@@ -1,129 +1,150 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import FormModal from "@/components/FormModal";
-import Pagination from "@/components/Pagination";
-import TableSearch from "@/components/TableSearch";
-import { role } from "@/lib/data";
-import prisma from "@/lib/prisma";
-import { ITEM_PER_PAGE } from "@/lib/settings";
-import { Campaign, Company, Cost, Event, Lead, Player, Prisma } from "@prisma/client";
-import Image from "next/image";
-import Link from "next/link";
-import React from "react";
-import LeadsAtRisk from "@/components/LeadsAtRisk";
-
-type LeadList = Lead & {
-    players: Player[];
-    campaign?: Campaign;
-    event?: Event;
-    company?: Company;
-    cost: Cost | null;
-};
+import prisma from '@/lib/prisma';
+import Pagination from '@/components/Pagination';
+import LeadTable from '@/components/Tables/LeadTable';
+import { ITEM_PER_PAGE } from '@/lib/settings';
+import LeadFilter from '@/components/Filters/LeadFilter';
+import OpenCreateModalButton from '@/components/button/OpenCreateModalButton';
+import LeadFormModal from '@/components/forms/Modal/LeadFormModal';
+import LeadModalForm from '@/components/forms/Modal/LeadFormModal';
+import LeadFormCreate from '@/components/forms/Modal/LeadFormCreate';
 
 const LeadListPage = async ({ searchParams }: { searchParams: { [key: string]: string | undefined } }) => {
-    const { page, ...queryParams } = searchParams;
-    const p = page ? parseInt(page) : 1;
+  const page = parseInt(searchParams.page || "1", 10);
+  const startIndex = (page - 1) * ITEM_PER_PAGE;
+  
 
-    const query: Prisma.LeadWhereInput = {};
-    if (queryParams) {
-        for (const [key, value] of Object.entries(queryParams)) {
-            if (value !== undefined) {
-                switch (key) {
-                    case "playerId":
-                        query.players = { some: { id: value } };
-                        break;
-                    case "playername":
-                        query.players = { some: { name: { contains: value, mode: "insensitive" } } };
-                        break;
-                    case "search":
-                        query.name = { contains: value, mode: "insensitive" };
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
+  const {
+    name,
+    accountManager,
+    status,
+    source,
+    startDate,
+    endDate,
+  } = searchParams;
+
+const activitiesRaw = await prisma.activity.findMany({
+  select: { id: true, name: true, areaId: true }, // <-- agregamos areaId aquí
+  orderBy: { name: 'asc' },
+});
+
+const activities = activitiesRaw.map((a) => ({
+  id: a.id,
+  name: a.name ?? '',
+  areaId: a.areaId ?? null, // o '' si prefieres
+}));
+
+const countries = await prisma.country.findMany({
+  select: { id: true, name: true },
+  orderBy: { name: 'asc' },
+});
+
+const cities = await prisma.city.findMany({
+  select: { id: true, name: true, countryId: true },
+  orderBy: { name: 'asc' },
+});
+
+const accountManagers = await prisma.accountManager.findMany({
+  select: { id: true, firstName: true, lastName: true },
+  orderBy: { lastName: 'asc' },
+});
+
+const areas = await prisma.area.findMany({
+  select: { id: true, name: true },
+});
+
+
+  const where: any = {};
+
+  if (name) {
+    where.OR = [
+      { contact: { firstName: { contains: name, mode: 'insensitive' } } },
+      { contact: { lastName: { contains: name, mode: 'insensitive' } } },
+    ];
+  }
+
+  if (accountManager) {
+    where.accountManager = {
+      OR: [
+        { firstName: { contains: accountManager, mode: 'insensitive' } },
+        { lastName: { contains: accountManager, mode: 'insensitive' } },
+      ],
+    };
+  }
+
+  if (status) {
+    where.status = status;
+  }
+
+  if (source) {
+    where.activity = {
+      type: source,
+    };
+  }
+
+  if (startDate || endDate) {
+    where.createdAt = {};
+    if (startDate) {
+      where.createdAt.gte = new Date(startDate);
     }
+    if (endDate) {
+      where.createdAt.lte = new Date(endDate);
+    }
+  }
 
-    const [data, count] = await prisma.$transaction([
-        prisma.lead.findMany({
-            where: query,
-            include: {
-                campaign: { select: { name: true } },
-                event: { select: { name: true } },
-                company: { select: { name: true } },
-                players: { select: { id: true, name: true, surname: true } },
-            },
-            take: ITEM_PER_PAGE,
-            skip: ITEM_PER_PAGE * (p - 1),
-            orderBy: { createdAt: "asc" },
-        }),
-        prisma.lead.count({ where: query }),
-    ]);
+  const leads = await prisma.lead.findMany({
+    where,
+    include: {
+      accountManager: { select: { firstName: true, lastName: true } },
+      contact: { select: { firstName: true, lastName: true } },
+      company: { select: { id: true, name: true, revenue: true } },
+      activity: { select: { id: true, type: true, date: true } },
+    },
+    skip: startIndex,
+    take: ITEM_PER_PAGE,
+    orderBy: { createdAt: 'desc' },
+  });
 
-    return (
-        <Card className="p-6 shadow-md">
-            <div className="flex items-center justify-between mb-4">
-                <h1 className="text-lg font-semibold">Leads</h1>
-                <div className="flex items-center gap-4">
-                    <TableSearch />
-                    <Button className="bg-lamaYellow rounded-full">
-                        <Image src="/filter.png" alt="Filter" width={14} height={14} />
-                    </Button>
-                    <Button className="bg-lamaYellow rounded-full">
-                        <Image src="/sort.png" alt="Sort" width={14} height={14} />
-                    </Button>
-                    <FormModal table="lead" type="create" />
-                </div>
-            </div>
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-            <Table className="min-w-full border-collapse">
-                <TableHeader className="bg-gray-900 text-white font-semibold">
-                    <TableRow>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Lead</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Source</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Creation Date</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Status</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Last Action Date</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Commercial Manager</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Customer</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Estimated Value</TableHead>
-                        <TableHead className="py-4 px-6 text-left font-semibold text-white">Actions</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {data.map((item) => (
-                        <TableRow key={item.id} className="hover:bg-gray-100">
-                            <TableCell>{item.name}</TableCell>
-                            <TableCell className="text-center">{item.campaign ? "Campaña" : item.event ? "Evento" : "Desconocido"}</TableCell>
-                            <TableCell className="text-center">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-center">{item.status}</TableCell>
-                            <TableCell className="text-center">{new Date(item.updatedAt).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-center">{item.players.map(player => `${player.name} ${player.surname}`).join(", ")}</TableCell>
-                            <TableCell className="text-center">{item.company?.name}</TableCell>
-                            <TableCell className="text-center">{item.value} €</TableCell>
-                            <TableCell className="flex gap-2">
-                                <Link href={`/list/lead/${item.id}`}>
-                                <Button className="bg-lamaBlue rounded-full p-0 h-7 w-7 flex items-center justify-center">
-                                      <Image src="/view.png" alt="View" width={12} height={12} />
-                                </Button>
-                                </Link>
-                                <FormModal table="lead" type="update" id={item.id} />
-                                {role === "admin" && <FormModal table="lead" type="delete" id={item.id} />}
-                            </TableCell>
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-            
-            </div>
-            <Pagination page={p} count={count} />
+  const totalCount = await prisma.lead.count({ where });
 
-            <LeadsAtRisk />
-        </Card>
-        
-    );
+  const enterpriseCount = await prisma.lead.count({
+    where: {
+      ...where,
+      company: { revenue: { gt: 250_000_000 } },
+    },
+  });
+
+  const smbCount = await prisma.lead.count({
+    where: {
+      ...where,
+      company: { revenue: { lte: 250_000_000 } },
+    },
+  });
+
+  
+
+  return (
+    <>
+      <div className="mt-10 rounded-lg shadow">
+        <LeadFilter totalCount={totalCount} />
+        <div className="bg-gray-100 px-4 py-2 rounded-t-lg border-b border-gray-300 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-700">Leads</h2>
+            <LeadFormCreate
+              activities={activities}
+              countries={countries}
+              cities={cities}
+              accountManagers={accountManagers}
+              areas={areas}
+            />
+
+        </div>
+        <div className="bg-white p-4 rounded-b-lg">
+          
+          <LeadTable leads={leads} />
+          <Pagination page={page} count={totalCount} />
+        </div>
+      </div>
+    </>
+  );
 };
 
 export default LeadListPage;

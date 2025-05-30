@@ -1,176 +1,112 @@
-import FormModal from '@/components/FormModal';
-import Pagination from '@/components/Pagination'
-import Table from '@/components/Table';
-import TableSearchContact from '@/components/TableSearchContact';
-import { role} from '@/lib/data';
-import prisma from '@/lib/prisma';
-import { ITEM_PER_PAGE } from '@/lib/settings';
-import { Company, Contact, Partner } from '@prisma/client';
-import Image from 'next/image'
-import Link from 'next/link';
-import React from 'react'
+import ContactFilter from "@/components/Filters/ContactFilter";
+import ContactFormCreate from "@/components/forms/Modal/ContactFormCreate";
 
-type ContactList = Contact & {company:Company}  & {partner:Partner}
+import Pagination from "@/components/Pagination";
+import ContactTable from "@/components/Tables/ContactTable";
 
-const countryCodeMap: Record<string, string> = {
-  Spain: "ES", France: "FR", Germany: "DE", Italy: "IT", 
-  "United States": "US", "United Kingdom": "GB", Canada: "CA", 
-  Mexico: "MX", Brazil: "BR", Argentina: "AR", Australia: "AU", 
-  Japan: "JP", China: "CN", India: "IN", Netherlands: "NL", Sweden: "SE",
-  USA: "US",
-};
+import prisma from "@/lib/prisma";
+import { ITEM_PER_PAGE } from "@/lib/settings";
 
-const getFlagImageUrl = (country: string) => {
-  const code = countryCodeMap[country]; 
-  return code
-    ? `https://flagcdn.com/w40/${code.toLowerCase()}.png`
-    : "https://via.placeholder.com/40x30"; 
-};
-
-const columns = [
-  {
-    header: "Info",
-    accessor: "info",
-  },
-  {
-    header: "Organization",
-    accessor: "company",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Role",
-    accessor: "role",
-    className: "hidden md:table-cell",
-  },
-  {
-    header: "Phone",
-    accessor: "phone",
-    className: "hidden md:table-cell",
-  },  
-  {
-    header: "Country",
-    accessor: "country",
-    className: "hidden lg:table-cell",
-  },
-  {
-    header: "City",
-    accessor: "city",
-    className: "hidden lg:table-cell",
-  },
-  {
-    header: "Actions",
-    accessor: "action",
-  },
-];
-
-const renderRow = (item: ContactList) => (
-  <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurple1Light">
-    <td className="flex items-center gap-4 p-4">
-      <div className="flex flex-col">
-        <h3 className="font-semibold">{item.name}</h3>
-        <p className="text-xs text-gray-500">{item.email}</p>
-      </div>
-    </td>
-    <td className="hidden md:table-cell">{item.company?.name}</td>
-    <td className="hidden md:table-cell">{item.role}</td>
-    <td className="hidden md:table-cell">{item.phone}</td>
-     <td className="hidden md:table-cell items-center gap-2">
-          
-     {item.company.country && (
-  <div className="flex items-center space-x-2">
-    <Image
-      src={getFlagImageUrl(item.company.country)}
-      alt={item.company.country}
-      width={24}
-      height={16}
-      className="rounded-sm border border-gray-300"
-    />
-    <span>{item.company.country}</span>
-  </div>
-)}
-
-{!item.company.country && <span>N/A</span>}
-        </td>
-    <td className="hidden md:table-cell">{item.company?.city}</td>
-    <td>
-      <div className="flex items-center gap-2">
-        <Link href={`/list/contact/${item.id}`} >
-          <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaBlue">
-            <Image src="/view.png" alt="" width={16} height={16} />
-          </button>
-        </Link>
-        <FormModal table="contact" type="update" id={item.id} />
-        {role === "admin" && <FormModal table="contact" type="delete" id={item.id} />}
-      </div>
-    </td>
-  </tr>
-);
-
-const ContactListPage = async({
+const ContactListPage = async ({
   searchParams,
 }: {
-  searchParams: { [key: string]: string  | undefined };
+  searchParams: { [key: string]: string | undefined };
 }) => {
-  
-  const {page, ...queryParams} = searchParams;
-  
-  const p = page ? parseInt(page) : 1;
+  const page = parseInt(searchParams.page || "1", 10);
+  const startIndex = (page - 1) * ITEM_PER_PAGE;
 
-  const [data, count] = await prisma.$transaction([
-    prisma.contact.findMany({
-      where: {
-        type: {
-          equals: "Client",
-          mode: "insensitive",
+  const lastNameFilter = searchParams.lastName?.trim();
+  const emailFilter = searchParams.email?.trim();
+  const jobTitleFilter = searchParams.jobTitle?.trim();
+  const countryIdFilter = searchParams.countryId?.trim();
+  const cityIdFilter = searchParams.cityId?.trim();
+
+  // 👇 Agregamos la consulta de companies
+  const [countries, cities, companies, contacts, totalCount, prospectCount, clientCount, partnerCount] =
+    await Promise.all([
+      prisma.country.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.city.findMany({
+        select: { id: true, name: true, countryId: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.company.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.contact.findMany({
+        where: {
+          type: { in: ["PROSPECT", "CLIENT"] },
+          ...(lastNameFilter && {
+            lastName: {
+              contains: lastNameFilter,
+              mode: "insensitive",
+            },
+          }),
+          ...(emailFilter && {
+            email: {
+              contains: emailFilter,
+              mode: "insensitive",
+            },
+          }),
+          ...(jobTitleFilter && { jobTitle: jobTitleFilter as any }),
+          ...(countryIdFilter && { countryId: countryIdFilter }),
+          ...(cityIdFilter && { cityId: cityIdFilter }),
         },
-      },
-      include: {
-        company: {
-          select: {
-            name: true,
-            country: true,
-            city: true,
-          },
+        include: {
+          company: { select: { name: true } },
+          country: { select: { name: true } },
+          city: { select: { name: true } },
         },
-        partner: {
-          select: {
-            name: true,
-            country: true,
-            city: true,
-          },
+        skip: startIndex,
+        take: ITEM_PER_PAGE,
+      }),
+      prisma.contact.count({
+        where: {
+          type: { in: ["PROSPECT", "CLIENT", "PARTNER"] },
+          ...(lastNameFilter && {
+            lastName: {
+              contains: lastNameFilter,
+              mode: "insensitive",
+            },
+          }),
+          ...(emailFilter && {
+            email: {
+              contains: emailFilter,
+              mode: "insensitive",
+            },
+          }),
+          ...(jobTitleFilter && { jobTitle: jobTitleFilter as any }),
+          ...(countryIdFilter && { countryId: countryIdFilter }),
+          ...(cityIdFilter && { cityId: cityIdFilter }),
         },
-      },
-      take: ITEM_PER_PAGE,
-      skip: ITEM_PER_PAGE * (p - 1),
-    }),
-    prisma.contact.count({
-      where: {
-        type: "Client",
-      },
-    }),
-  ]);
-  
+      }),
+      prisma.contact.count({ where: { type: "PROSPECT" } }),
+      prisma.contact.count({ where: { type: "CLIENT" } }),
+      prisma.contact.count({ where: { type: "PARTNER" } }),
+    ]);
+
   return (
-    <div className='bg-white p-4 rounded-md flex-1 m-4 mt-0 h-full'>
-      <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">Contactos</h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-           <TableSearchContact />
-           <div className="flex items-center gap-4 self-end">
-              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-              </button>
-              <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-              </button>
-              <FormModal table="contact" type="create"/>
-           </div>
-        </div>
-      </div>
-      <Table columns={columns} renderRow={renderRow} data={data}/>
-      <Pagination page={p} count={count} />
-    </div>
-  )
-}
+    <div className="mt-10 rounded-lg shadow">
+      <ContactFilter countries={countries} cities={cities} totalCount={totalCount} />
 
-export default ContactListPage
+      <div className="bg-gray-100 px-4 py-2 rounded-t-lg border-b border-gray-300 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-700">
+          Contacts - Prospects: {prospectCount} | Clients: {clientCount} | Partners: {partnerCount}
+        </h2>
+
+        {/* 👇 Aquí colocamos el botón + modal */}
+        <ContactFormCreate countries={countries} cities={cities} companies={companies} />
+      </div>
+
+      <div className="bg-white p-4 rounded-b-lg">
+        <ContactTable contacts={contacts} />
+        <Pagination page={page} count={totalCount} />
+      </div>
+    </div>
+  );
+};
+
+export default ContactListPage;

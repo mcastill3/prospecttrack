@@ -16,12 +16,12 @@ const UserCard = async ({ type }: { type: "leads" | "conversion" | "ingresos" | 
 
   if (type === "conversion") {
     // Contar campañas creadas
-    const totalCampaigns = await prisma.campaign.count();
+    const totalCampaigns = await prisma.activity.count();
 
     // Contar leads que provienen de campañas
     const totalLeads = await prisma.lead.count({
       where: {
-        campaignId: { not: null } // Solo leads vinculados a campañas
+        activityId: { not: null } // Solo leads vinculados a campañas
       }
     });
 

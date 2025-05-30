@@ -1,4 +1,5 @@
-export const ITEM_PER_PAGE = 10
+export const ITEM_PER_PAGE = 8
+
 
 type RouteAccessMap = {
     [key: string]: string[];
@@ -25,5 +26,7 @@ type RouteAccessMap = {
     "/list/tasks": ["admin", "analista_marketing", "digital_sales"],
     "/list/strategies": ["admin", "analista_marketing"],
     "/list/lead": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
+    "/list/generator": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
+    "/list/processor": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
 
   };

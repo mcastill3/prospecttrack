@@ -5,10 +5,10 @@ const UserCardDirectorMark = async ({ type }: { type: "leads" | "conversion" | "
   let data: number | string = 0;
 
   if (type === "conversion") {
-    const totalCampaigns = await prisma.campaign.count();
+    const totalCampaigns = await prisma.activity.count();
     const totalLeads = await prisma.lead.count({
       where: {
-        campaignId: { not: null }
+        activityId: { not: null }
       }
     });
     const conversionRate = totalCampaigns > 0 ? (totalLeads / totalCampaigns) * 100 : 0;
@@ -16,7 +16,7 @@ const UserCardDirectorMark = async ({ type }: { type: "leads" | "conversion" | "
   } else {
     const modelMap = {
       leads: () => prisma.lead.count(),
-      campaigns: () => prisma.campaign.count(), // Contar el número total de campañas
+      campaigns: () => prisma.activity.count(), // Contar el número total de campañas
       contactos: () => prisma.contact.count(),
     } as const;
 

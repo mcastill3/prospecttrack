@@ -10,7 +10,7 @@ type ChartDataItem = {
 
 const StackedChartContainer = async () => {
   // Obtener el número de campañas agrupadas por mes y tipo
-  const campaigns = await prisma.campaign.groupBy({
+  const campaigns = await prisma.activity.groupBy({
     by: ["type", "date"],
     _count: { id: true },
     orderBy: [

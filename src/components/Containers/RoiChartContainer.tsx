@@ -4,19 +4,14 @@ import RoiChart from "../Charts/dirMarketing/RoiChart";
 
 const RoiChartContainer = async () => {
     // Obtener los costos de campañas y eventos agrupados por mes
-    const campaignCosts = await prisma.campaign.findMany({
+    const campaignCosts = await prisma.activity.findMany({
         select: {
             date: true,
             cost: { select: { amount: true } },
         },
     });
 
-    const eventCosts = await prisma.event.findMany({
-        select: {
-            date: true,
-            cost: { select: { amount: true } },
-        },
-    });
+    
 
     // Obtener los ingresos de los leads agrupados por mes
     const leadRevenues = await prisma.lead.findMany({
@@ -42,11 +37,7 @@ const RoiChartContainer = async () => {
     });
 
     // Procesar costos de eventos
-    eventCosts.forEach(({ date, cost }) => {
-        const month = formatDate(date);
-        if (!monthlyData[month]) monthlyData[month] = { cost: 0, revenue: 0 };
-        monthlyData[month].cost += cost?.amount || 0;
-    });
+   
 
     // Procesar ingresos de los leads
     leadRevenues.forEach(({ createdAt, value }) => {

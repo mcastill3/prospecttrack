@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 const CampaignsTable = async () => {
   // Obtener las campañas de la base de datos, ordenadas por fecha ascendente
-  const campaigns = await prisma.campaign.findMany({
+  const campaigns = await prisma.activity.findMany({
      take: 5,
     orderBy: {
       date: "asc",
@@ -48,14 +48,12 @@ const CampaignsTable = async () => {
                 className="hover:bg-gray-200 transition-all duration-200"
               >
                 <TableCell className="py-3 px-6 text-gray-900 font-medium">
-                  {campaign.name}
+                  Type
                 </TableCell>
                 <TableCell className="py-3 px-6 text-gray-800">
                   {campaign.date.toLocaleDateString()}
                 </TableCell>
-                <TableCell className="py-3 px-6 text-gray-800">
-                  {campaign.status.replace(/_/g, " ")}
-                </TableCell>
+                
                 <TableCell className="py-3 px-6 text-gray-800">
                   {campaign.type.replace(/_/g, " ")}
                 </TableCell>

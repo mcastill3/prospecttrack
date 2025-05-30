@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "PlayerRole" ADD VALUE 'DIGITAL_SALES';

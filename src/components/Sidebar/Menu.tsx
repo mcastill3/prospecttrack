@@ -1,7 +1,7 @@
 import { currentUser } from '@clerk/nextjs/server';
 import Image from 'next/image';
 import Link from 'next/link';
-import { faBuilding, faAddressBook, faCalendar, faComments, faHandshake, faChartBar, faIdBadge, faPaperPlane, faMoneyBill1, faClipboard, faLightbulb, faCirclePlay, faCircle, faBookmark, faFlag, faPenToSquare } from "@fortawesome/free-regular-svg-icons";
+import { faBuilding, faAddressBook, faCalendar, faComments, faHandshake, faChartBar, faIdBadge, faPaperPlane, faMoneyBill1, faClipboard, faLightbulb, faCirclePlay, faCircle, faBookmark, faFlag, faPenToSquare, faFileLines, faFolder, faObjectGroup } from "@fortawesome/free-regular-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const menuItems = [
@@ -23,7 +23,7 @@ const menuItems = [
         },
         {
           icon: faPaperPlane,
-          label: "Campaigns",
+          label: "Activities",
           href: "/list/campaign",
           visible: ["admin", "director_comercial"],
         },
@@ -33,28 +33,11 @@ const menuItems = [
           href: "/list/lead",
           visible: ["admin", "director_comercial"],
         },
-        {
-          icon: faMoneyBill1,
-          label: "Finance",
-          href: "/list/subjects",
-          visible: ["admin", "comercial", "director_comercial"],
-        },
-        {
-          icon: faIdBadge,
-          label: "Team",
-          href: "/list/player",
-          visible: ["admin", "comercial", "director_comercial"],
-        },
+        
         {
           icon: faBuilding,
-          label: "Organizations",
+          label: "Accounts",
           href: "/list/organizations",
-          visible: ["admin", "comercial", "director_comercial"],
-        },
-        {
-          icon: faHandshake,
-          label: "Partners",
-          href: "/list/partner",
           visible: ["admin", "comercial", "director_comercial"],
         },
         {
@@ -64,9 +47,9 @@ const menuItems = [
           visible: ["admin", "comercial", "director_comercial"],
         },
         {
-          icon: faComments,
-          label: "Announcements",
-          href: "/list/announcements",
+          icon: faFileLines,
+          label: "Reports",
+          href: "/list/contact",
           visible: ["admin", "comercial", "director_comercial"],
         },
       ],
@@ -89,7 +72,7 @@ const menuItems = [
         },
         {
           icon: faPaperPlane,
-          label: "Campaigns",
+          label: "Activities",
           href: "/list/campaign",
           visible: ["admin", "director_marketing"],
         },
@@ -99,28 +82,11 @@ const menuItems = [
           href: "/list/lead",
           visible: ["admin", "director_marketing"],
         },
-        {
-          icon: faMoneyBill1,
-          label: "Finance",
-          href: "/list/subjects",
-          visible: ["admin", "comercial", "director_comercial"],
-        },
-        {
-          icon: faIdBadge,
-          label: "Team",
-          href: "/list/player",
-          visible: ["admin", "director_marketing"],
-        },
+        
         {
           icon: faBuilding,
-          label: "Organizations",
+          label: "Accounts",
           href: "/list/organizations",
-          visible: ["admin", "director_marketing"],
-        },
-        {
-          icon: faHandshake,
-          label: "Partners",
-          href: "/list/partner",
           visible: ["admin", "director_marketing"],
         },
         {
@@ -130,29 +96,29 @@ const menuItems = [
           visible: ["admin", "director_marketing"],
         },
         {
-          icon: faComments,
-          label: "Announcements",
-          href: "/list/announcements",
+          icon: faBookmark,
+          label: "Tracking",
+          href: "/list/track",
+          visible: ["admin", "director_marketing"],
+        },        
+        {
+          icon: faFolder,
+          label: "Files Processor",
+          href: "/list/processor",
           visible: ["admin", "director_marketing"],
         },
         {
-          icon: faLightbulb,
-          label: "Tasks",
-          href: "/list/tasks",
+          icon: faObjectGroup,
+          label: "Generate Lists",
+          href: "/list/generator",
           visible: ["admin", "director_marketing"],
         },
         {
-          icon: faCircle,
-          label: "Ciclos",
-          href: "/list/ciclos",
+          icon: faFileLines,
+          label: "Reports",
+          href: "/reporting",
           visible: ["admin", "director_marketing"],
-        },
-        {
-          icon: faCirclePlay,
-          label: "Flujos",
-          href: "/list/flujos",
-          visible: ["admin", "director_marketing"],
-        },
+        },        
       ],
     },
     {
@@ -173,19 +139,14 @@ const menuItems = [
         },
         {
           icon: faPaperPlane,
-          label: "Campaigns",
+          label: "Activities",
           href: "/list/campaign",
           visible: ["admin", "analista_marketing"],
         },
-        {
-          icon: faIdBadge,
-          label: "Team",
-          href: "/list/player",
-          visible: ["admin", "analista_marketing"],
-        },
+        
         {
           icon: faBuilding,
-          label: "Organizations",
+          label: "Accounts",
           href: "/list/organizations",
           visible: ["admin", "analista_marketing"],
         },
@@ -239,7 +200,7 @@ const menuItems = [
         },
         {
           icon: faPaperPlane,
-          label: "Campaigns",
+          label: "Activities",
           href: "/list/campaign",
           visible: ["admin", "digital_sales"],
         },
@@ -249,24 +210,14 @@ const menuItems = [
           href: "/list/lead",
           visible: ["admin", "digital_sales"],
         },
-        {
-          icon: faIdBadge,
-          label: "Team",
-          href: "/list/player",
-          visible: ["admin", "digital_sales"],
-        },
+        
         {
           icon: faBuilding,
-          label: "Organizations",
+          label: "Accounts",
           href: "/list/organizations",
           visible: ["admin", "digital_sales"],
         },
-        {
-          icon: faHandshake,
-          label: "Partners",
-          href: "/list/partner",
-          visible: ["admin", "digital_sales"],
-        },
+        
         {
           icon: faAddressBook,
           label: "Contacts",
@@ -276,19 +227,25 @@ const menuItems = [
         {
           icon: faBookmark,
           label: "Tracking",
-          href: "/list/lead",
+          href: "/list/track",
+          visible: ["admin", "digital_sales"],
+        },        
+        {
+          icon: faFolder,
+          label: "Files Processor",
+          href: "/list/processor",
           visible: ["admin", "digital_sales"],
         },
         {
-          icon: faLightbulb,
-          label: "Tasks",
-          href: "/list/tasks",
+          icon: faObjectGroup,
+          label: "Generate Lists",
+          href: "/list/generator",
           visible: ["admin", "digital_sales"],
         },
         {
-          icon: faFlag,
-          label: "Strategies",
-          href: "/list/strategies",
+          icon: faFileLines,
+          label: "Reports",
+          href: "/reporting",
           visible: ["admin", "digital_sales"],
         },
       ],

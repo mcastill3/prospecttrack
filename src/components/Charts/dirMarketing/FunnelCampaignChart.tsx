@@ -8,7 +8,7 @@ interface FunnelChartProps {
 
 const FunnelCampaignChart = ({ data }: FunnelChartProps) => {
   return (
-    <div className="w-[500px] h-[400px]">
+    <div className="w-[500px] h-[350px]">
       <ResponsiveFunnel
         data={data}
         margin={{ top: 20, right: 30, bottom: 20, left: 30 }}
@@ -24,9 +24,9 @@ const FunnelCampaignChart = ({ data }: FunnelChartProps) => {
         theme={{
           labels: {
             text: {
-              fontSize: 14,
+              fontSize: 18,
               fontWeight: "bold",
-              fill: "#333",
+              fill: "#000",
             },
           },
           tooltip: {

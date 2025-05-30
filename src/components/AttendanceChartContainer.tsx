@@ -13,7 +13,7 @@ type CombinedData = {
 
 // Función asincrónica que obtiene las campañas por mes (sin tener en cuenta el día)
 export const getCampaignsByMonth = async () => {
-  const campaignsByMonth = await prisma.campaign.groupBy({
+  const campaignsByMonth = await prisma.activity.groupBy({
     by: ['date'],
     _count: {
       id: true,
@@ -38,37 +38,12 @@ export const getCampaignsByMonth = async () => {
   });
 };
 
-// Función asincrónica que obtiene los eventos por mes (sin tener en cuenta el día)
-export const getEventsByMonth = async () => {
-  const eventsByMonth = await prisma.event.groupBy({
-    by: ['date'],
-    _count: {
-      id: true,
-    },
-    where: {
-      date: {
-        gte: new Date('2025-01-01'),
-      },
-    },
-    orderBy: {
-      date: 'asc',
-    },
-  });
 
-  // Agrupar solo por mes y año (ignorar el día)
-  return eventsByMonth.map((item) => {
-    const monthYear = item.date.toISOString().substring(0, 7); // Formato YYYY-MM
-    return {
-      month: monthYear,
-      events: item._count.id,
-    };
-  });
-};
 
 const AttendanceChartContainer = async () => {
   // Obtener los datos por separado
   const campaignsData = await getCampaignsByMonth();
-  const eventsData = await getEventsByMonth();
+  
 
   // Unificar los datos de campañas y eventos en base al mes y año
   const combinedData: CombinedData[] = [];
@@ -88,18 +63,7 @@ const AttendanceChartContainer = async () => {
   });
 
   // Unificar eventos
-  eventsData.forEach((event) => {
-    const existingMonth = combinedData.find((data) => data.name === event.month);
-    if (existingMonth) {
-      existingMonth.events += event.events; // Sumar los eventos
-    } else {
-      combinedData.push({
-        name: event.month,
-        campaigns: 0, // Inicializar con 0 campañas
-        events: event.events,
-      });
-    }
-  });
+  
 
   const title = `Activities monthly report - ${new Date().getFullYear()}`; // Título con el año actual
 

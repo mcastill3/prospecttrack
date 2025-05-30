@@ -25,7 +25,7 @@ const ValuesTable = async () => {
           <tbody className="divide-y divide-gray-200">
             {costs.map((cost) => (
               <tr key={cost.id} className="hover:bg-gray-50">
-                <td className="py-3 px-6 text-gray-800">{cost.type}</td>
+                <td className="py-3 px-6 text-gray-800">{cost.name}</td>
                 <td className="py-3 px-6 text-gray-800">€{cost.amount}</td>
                 <td className="py-3 px-6 text-gray-800">{cost.currency}</td>
               </tr>

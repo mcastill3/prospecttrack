@@ -39,12 +39,11 @@ const SinglePlayerPage = async ({ params: { id } }: { params: { id: string } }) 
    // Calcular tasa de conversión
    const conversionRate = totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(2) : "0";
 
-   const activeCampaigns = await prisma.campaign.count({
+   const activeCampaigns = await prisma.activity.count({
       where: {
          players: {
             some: { id }, // Relación many-to-many con jugadores
          },
-         status: { in: ["TO_DO", "IN_PROGRESS"] }, // Filtrar campañas activas
       },
    });
 

@@ -8,11 +8,11 @@ const FinanceChart = ({
   data: { name: string; cost: number }[]; // Ahora tiene un solo campo "cost"
 }) => {
   return (
-    <div className="rounded-xl w-full h-full p-4 mt-10">
-      <ResponsiveContainer width="100%" height={300}>
+    <div className="rounded-xl w-full h-full p-4 mt-5">
+      <ResponsiveContainer width="100%" height={250}>
         <LineChart
           data={data}
-          margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
+          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#ddd" />
           <XAxis
@@ -36,7 +36,7 @@ const FinanceChart = ({
             allowDataOverflow
           />
           <Tooltip />
-          <Legend align="center" verticalAlign="top" wrapperStyle={{ paddingBottom: "10px" }} />
+          <Legend align="center" verticalAlign="top" wrapperStyle={{ paddingBottom: "5px" }} />
           <Line
             type="monotone"
             dataKey="cost"  // Ahora solo mostramos el campo "cost"

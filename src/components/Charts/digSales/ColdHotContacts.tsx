@@ -17,8 +17,8 @@ const ColdHotContacts: React.FC = () => {
       chart: {
         height: 400,
         type: "radialBar",
-        toolbar: { show: true },
-        zoom: { enabled: true },
+        toolbar: { show: false },
+        zoom: { enabled: false },
       },      
       plotOptions: {
         radialBar: {
@@ -49,7 +49,7 @@ const ColdHotContacts: React.FC = () => {
           breakpoint: 480,
           options: {
             chart: {
-              height: 350,
+              height: 400,
             },
           },
         },
@@ -70,12 +70,13 @@ const ColdHotContacts: React.FC = () => {
 
   return (
     <div ref={chartRef}>
-      <h2 className="text-xl font-semibold mb-4">Cold vs Hot Contacts</h2>
+      
       <ReactApexChart
         options={chartData.options}
         series={chartData.series}
         type="radialBar"
-        height={350}
+        height={450}
+        width={450}
       />
       
     </div>

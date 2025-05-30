@@ -1,37 +1,56 @@
 import Image from "next/image";
 import prisma  from "@/lib/prisma";
-import CampaignsTable from "@/components/Tables/TableCampaigns";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import ActivityTable from "@/components/Tables/ActivityTable";
+import { ITEM_PER_PAGE } from "@/lib/settings";
 
-const SingleCampaignPage = async ({ params }: { params: { id: string } }) => {
+const SingleActivityPage = async ({ params }: { params: { id: string } }) => {
 
 const getCampaignDetails = async (id: string) => {
- return await prisma.campaign.findUnique({
-      where: { id },
-    });
+   return await prisma.activity.findUnique({
+    where: { id },
+    include: {
+      area: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      cost: {
+        select: {
+          id: true,
+          name: true,
+          amount: true,
+        },
+      },
+    },
+  });
   };
   
 
  const campaign = await getCampaignDetails(params.id);
   
   if (!campaign) {
-    return <p className="text-red-500">Campaña no encontrada</p>;
+    return <p className="text-red-500">Activity not found</p>;
   }
 
-const getLeadsCountByCampaign = async (campaignId: string) => {
+const getLeadsCountByCampaign = async (activityId: string) => {
   const leadsCount = await prisma.lead.count({
-    where: { campaignId },
+    where: { activityId },
   });
     
   return leadsCount;
   };
 
   const leadsCount = await getLeadsCountByCampaign(params.id);
-  const getTotalLeadValueByCampaign = async (campaignId: string) => {
+  const getTotalLeadValueByCampaign = async (activityId: string) => {
     const pipelineAmount = await prisma.lead.aggregate({
       _sum: {
         value: true, // Sumar el campo value
       },
-      where: { campaignId },
+      where: { activityId },
     });
   
     return pipelineAmount._sum.value || 0; // Si no hay leads, devuelve 0
@@ -39,252 +58,218 @@ const getLeadsCountByCampaign = async (campaignId: string) => {
   
   const pipelineAmount = await getTotalLeadValueByCampaign(params.id);
 
-  const getTotalCostByCampaign = async (campaignId: string) => {
-    const totalCost = await prisma.cost.aggregate({
-      _sum: {
-        amount: true, // Sumar el campo "amount"
-      },
-      where: {
-        campaign: {
-          some: { id: campaignId }, // Filtrar por el ID de la campaña
+const [activities, totalCount] = await Promise.all([
+  prisma.activity.findMany({
+    include: {
+      leads: {
+        select: {
+          id: true,
+          name: true,
+          value: true,
+          accountManager: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+          contact: {
+            select: {
+              firstName: true,
+              lastName: true,
+              jobTitle: true,
+            },
+          },
+          company: {
+            select: {
+              id: true,
+              name: true,
+              revenue: true,
+            },
+          },
         },
       },
-    });
-  
-    return totalCost._sum.amount || 0; // Si no hay costos, devuelve 0
-  };
-  
-  const totalCost = await getTotalCostByCampaign(params.id);
+      cost: {
+        select: {
+          id: true,
+          name: true,
+          amount: true,
+          currency: true,
+        },
+      },
+      area: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    take: ITEM_PER_PAGE,
+    orderBy: { date: "desc" },
+  }),
+  prisma.activity.count(),
+]);
 
+  
 
 return (
-<div className="flex-1 p-4 flex flex-col gap-4 xl:flex-row">
-         {/* LEFT */}
-         <div>
-            {/* TOP */}
-            <div className="flex flex-col lg:flex-row gap-4 h-[270px] w-[1200px]">
-               {/* Organization Info Card */}
-               <div className="relative rounded-md flex-1 flex gap-4 overflow-hidden">
-                    {/* Fondo dividido: Imagen con overlay arriba, blanco abajo */}
-                    <div className="absolute inset-0 h-full w-full">
-                      <div className="h-2/5 bg-cover bg-center relative" style={{ backgroundImage: "url('/background.jpg')" }}>
-                           {/* Overlay oscuro para mejorar legibilidad */}
-                           <div className="absolute inset-0 bg-black opacity-10"></div>
-                      </div>
-                            {/* Información de la Organización */}
-                            <div className="h-3/5 bg-white flex flex-col items-center justify-center gap-4 p-6 rounded-lg shadow-lg">
-                              {/* Nombre de la campaña */}
-                              <h1 className="text-2xl font-bold text-black text-center mb-2 mr-2">{campaign.name}</h1>
-
-                              {/* Contenedor con dos columnas bien separadas */}
-                              <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-black text-sm self-end mr-28">
-                                {/* Tipo */}
-                                <div className="flex items-center gap-2">
-                                  <Image src="/company.png" alt="Department Icon" width={20} height={20} />
-                                  <span className="font-medium">{campaign.type}</span>
-                                </div>
-
-                                {/* Contactos objetivo */}
-                                <div className="flex items-center gap-2">
-                                  <Image src="/roleemployee.png" alt="Email Icon" width={20} height={20} />                                 
-                                  <span>{campaign.targetContacts || "Contactos no incluidos"}</span>
-                                </div>
-
-                                {/* Fecha */}
-                                <div className="flex items-center gap-2">
-                                  <Image src="/mobilephone.png" alt="Phone Icon" width={20} height={20} />
-                                  <span>{campaign.date ? new Date(campaign.date).toLocaleDateString("es-ES") : "Sin fecha"}</span>
-                                </div>  
-
-                                {/* Estado */}
-                                <div className="flex items-center gap-2">
-                                  <Image src="/email.png" alt="Role Icon" width={20} height={20} />
-                                  <span className="break-words whitespace-normal max-w-[140px] font-semibold text-blue-600">
-                                    {campaign.status.replace(/_/g, " ")}
-                                  </span>
-                                </div>            
-                              </div>    
-                            </div>                        
-                        </div>
-                    {/* Contenido de la tarjeta */}
-                    <div className="relative flex w-full p-6 ">
-                        {/* Imagen de usuario */}
-                          <div className="w-1/3 flex items-center justify-center">
-                            <Image
-                              src= "/logo.png"
-                              alt="User Avatar"
-                              width={144}
-                              height={144}
-                              className="w-30 h-30 rounded-md object-cover border-4 border-white mr-16"
-                            />
-                          </div>                                                   
-                    </div>                                
-               </div>
-
-               {/* SMALL CARDS */}
-               <div className="flex-1 flex gap-4 justify-between flex-wrap">
-                  {/* Attendance */}
-                    <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-                    <Image src="/campaigns.png" alt="Campaigns" width={24} height={24} className="w-6 h-6" />
-                    <div>
-                        <h1 className="text-xl font-semibold">{campaign.targetContacts}</h1>
-                        <span className="text-sm text-gray-400">Attendance</span>
-                    </div>
-                    </div>
-
-                    {/* Leads generados */}
-                    <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-                    <Image src="/funnel.png" alt="Leads" width={24} height={24} className="w-6 h-6" />
-                        <div>
-                            <h1 className="text-xl font-semibold">{leadsCount}</h1>
-                            <span className="text-sm text-gray-400">Leads Generated</span>
-                        </div>
-                    </div>
-
-                    {/* Pipeline generado */}
-                    <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%] xl:w-[45%] 2xl:w-[48%]">
-                    <Image src="/finances.png" alt="Pipeline" width={24} height={24} className="w-6 h-6" />
-                    <div>
-                        <h1 className="text-xl font-semibold">
-                         {pipelineAmount.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                        </h1>
-                        <span className="text-sm text-gray-400">Pipeline Generated</span>
-                    </div>
-                    </div>
-
-                    {/* Última Actividad */}
-                    <div className="bg-white p-4 rounded-md flex gap-4 w-full md:w-[48%]">
-                        <Image src="/lastActivity.png" alt="Last Activity" width={24} height={24}  className="w-6 h-6"/>
-                        <div>
-                        <h1 className="text-xl font-semibold">
-                         {totalCost.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
-                        </h1>
-                          <span className="text-sm text-gray-400">Costo</span>
-                        </div>
-                    </div>
-
-               </div>
+<div className="flex flex-col gap-4 p-4 h-full">
+  {/* TOP ROW: LEFT + RIGHT */}
+  <div className="flex flex-col xl:flex-row gap-4">
+    {/* LEFT */}
+    <div className="flex-1">
+      {/* TOP */}
+      <div className="flex flex-col lg:flex-row gap-4 h-[270px]">
+        {/* Organization Info Card */}
+        <div className="relative rounded-md flex-1 flex gap-4 overflow-hidden">
+          {/* Imagen de fondo y overlay */}
+          <div className="absolute inset-0 h-full w-full">
+            <div
+              className="h-3/5 bg-cover bg-center relative"
+              style={{ backgroundImage: "url('/background.jpg')" }}
+            >
+              <div className="absolute inset-0 bg-black opacity-10"></div>
             </div>
-
-            {/* BOTTOM: Aquí podrías incluir tablas u otro contenido relacionado */}
-            <div className="mt-4 bg-white rounded-md p-4 h-[430px]">
-                <CampaignsTable />
+            <div className="h-2/5 bg-white flex flex-col items-center justify-center gap-4 p-6 rounded-lg shadow-lg">
+              <h2 className="text-sm uppercase text-gray-500 tracking-wider">Activity Details</h2>
+              <h1 className="text-2xl font-semibold text-gray-800">{campaign.type}</h1>
             </div>
-            <div className="mt-4 bg-white rounded-md p-4 h-[430px]">
-                TableOrganizationCampaigns  
+          </div>
+          <div className="relative flex w-full p-6">
+            <div className="w-1/3 flex items-center justify-center">
+              <Image
+                src="/logo.png"
+                alt="User Avatar"
+                width={144}
+                height={144}
+                className="w-30 h-30 rounded-md object-cover border-4 border-white mr-16"
+              />
             </div>
-         </div>
+          </div>
+        </div>
+        {/* RIGHT CARD GROUP */}
+        <div className="flex-1 flex gap-4 justify-between flex-wrap">
+          {/* Card 1 */}
+     <Card className="py-2 px-3 flex gap-4 w-[24%] flex-1 min-w-[220px] h-[180px] relative">
+       <CardContent className="flex flex-col gap-3 p-0">
+        <span className="text-sm text-gray-400 text-left">Activity Info</span>
+        <h1 className="text-sm text-gray-400 font-semibold text-left w-full">{campaign.type}</h1>
+        <h1 className="text-sm text-gray-400 font-semibold text-left w-full">
+          Pipeline: {pipelineAmount} 
+        </h1>
+        <span className="text-sm text-gray-400 font-semibold">
+          {campaign.area?.name}
+        </span>
+        <span className="text-sm text-gray-400 font-semibold">
+         Cost: {campaign.cost?.amount} €
+        </span>
+        <div className="absolute right-4 bottom-6">
+          <img src="/logo.png" alt="Account Manager" className="w-12 h-12 rounded-full border-2 border-white" />
+        </div>
+      </CardContent>
+      <div className="absolute bottom-0 left-0 w-full h-[8px] flex rounded-xl overflow-hidden">
+        <div className="w-[70%] h-full bg-[#6900EE]"></div>
+        <div className="w-[30%] h-full bg-black"></div>
+      </div>
+     </Card>
+      {/* Card 2 */}
+      <Card className="py-2 px-3 flex gap-4 w-[24%] flex-1 min-w-[220px] h-[180px] relative">
+       <CardContent className="flex flex-col gap-3 p-0">
+        <span className="text-sm text-gray-400 text-left">Results</span>
+        <h1 className="text-sm text-gray-400 font-semibold text-left w-full">Leads: {leadsCount}</h1>
+        <h1 className="text-sm text-gray-400 font-semibold text-left w-full">
+          Pipeline: {pipelineAmount} €
+        </h1>
+        <span className="text-sm text-gray-400 font-semibold">
+         Contacts: {campaign.targetContacts}
+        </span>
+        <span className="text-sm text-gray-400 font-semibold">
+         Attendees: {campaign.attendees}
+        </span>
+        <div className="absolute right-4 bottom-6">
+          <img src="/logo.png" alt="Account Manager" className="w-12 h-12 rounded-full border-2 border-white" />
+        </div>
+      </CardContent>
+      <div className="absolute bottom-0 left-0 w-full h-[8px] flex rounded-xl overflow-hidden">
+        <div className="w-[70%] h-full bg-[#6900EE]"></div>
+        <div className="w-[30%] h-full bg-black"></div>
+      </div>
+     </Card>
+     {/* Card 3 */}
+      <Card className="py-2 px-3 flex gap-4 w-[24%] flex-1 min-w-[220px] h-[70px] relative">
+       <CardContent className="flex flex-col gap-3 p-0">
+        <span className="text-sm text-gray-400 text-left">Additional Info</span>
+        <h1 className="text-sm text-gray-400 font-semibold text-left w-full flex items-center space-x-2">
+          <span>Released: {new Date(campaign.date).toLocaleDateString()}</span>
+          <span></span>
+          <span>Assistance:  %</span>
+          <span></span>
+          <span>Platform: {campaign.cost?.name}</span>
+        </h1>
+        <div className="absolute right-4 bottom-4">
+          <img src="/logo.png" alt="Account Manager" className="w-12 h-12 rounded-full border-2 border-white " />
+        </div>
+      </CardContent>
+      <div className="absolute bottom-0 left-0 w-full h-[6px] flex rounded-xl overflow-hidden">
+        <div className="w-[70%] h-full bg-[#6900EE]"></div>
+        <div className="w-[30%] h-full bg-black"></div>
+      </div>
+     </Card>
+        </div>
+      </div>
+    </div>
 
-         {/* RIGHT */}
-         <div className="w-full xl:w-1/3 flex flex-col gap-4">
-            {/* CUSTOMER SNAPSHOT */}
-            <div className="bg-gradient-to-br from-white/75 to-white/95 backdrop-blur-xl p-6 rounded-2xl shadow-lg flex flex-col gap-6 border border-gray-300/50">
-                {/* Título */}
-                <div className="flex items-center justify-between border-b border-gray-300/40 pb-3">
-                    <h2 className="text-xl font-bold text-gray-800 tracking-wide">Customer Snapshot</h2>
-                    <span className={`text-sm font-semibold px-3 py-1 rounded-md`}>
-                        
-                    </span>
-                </div>
+    {/* RIGHT */}
+    <div className="w-full xl:w-[280px] min-h-[270px] flex flex-col gap-4">
+      <Card className="flex-1 relative">
+        <CardHeader>
+          <CardTitle>New Activity</CardTitle>
+          <CardDescription>Generate activities</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col space-y-2">
+            <Button asChild>
+              <Link href="">New Request</Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link href="">View My Requests</Link>
+            </Button>
+          </div>
+          
+        </CardContent>
+        <div className="absolute right-4 bottom-4">
+          <img
+            src="/logo.png"
+            alt="Account Manager"
+            className="w-12 h-12 rounded-full border-2 border-white"
+          />
+        </div>
+       <div className="absolute bottom-0 left-0 w-full h-[6px] flex rounded-xl overflow-hidden">
+        <div className="w-[70%] h-full bg-[#6900EE]"></div>
+        <div className="w-[30%] h-full bg-black"></div>
+       </div>
+      </Card>
+      
+    </div>
+  </div>
 
-                {/* Información de la empresa */}
-                <div className="flex flex-col gap-4 text-gray-700">
-                    {/* Industria */}
-                    <div className="flex items-center justify-between border-b border-gray-300/40 pb-3">
-                        <div className="flex items-center gap-3">
-                            <Image src="/organizations.png" alt="Industry Icon" width={24} height={24} />
-                            <span className="font-medium">Industria:</span>
-                        </div>
-                        <span className="text-gray-900 font-semibold"></span>
-                    </div>
-                    {/* Country */}
-
-                    <div className="flex items-center justify-between border-b border-gray-300/40 pb-3">
-                        <div className="flex items-center gap-3">
-                            <Image src="/location.png" alt="Industry Icon" width={24} height={24} />
-                            <span className="font-medium">País:</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <Image
-                                src="/{getFlagImageUrl(company.country)}"
-                                alt="{company.country}"
-                                width={20}
-                                height={20}
-                                className="rounded-sm border border-gray-300"
-                            />
-                            <span className="text-gray-900 font-semibold"></span>
-                        </div>                        
-                    </div>
-                    {/* Ciudad */}
-                    <div className="flex items-center justify-between border-b border-gray-300/40 pb-3">
-                        <div className="flex items-center gap-3">
-                            <Image src="/city.png" alt="Industry Icon" width={24} height={24} />
-                            <span className="font-medium">Ciudad:</span>
-                        </div>
-                        <span className="text-gray-900 font-semibold"></span>
-                    </div>
-
-                    {/* Tamaño de empresa */}
-                    <div className="flex items-center justify-between border-b border-gray-300/40 pb-3">
-                        <div className="flex items-center gap-3">
-                            <Image src="/employees.png" alt="Employees Icon" width={24} height={24} />
-                            <span className="font-medium">Tamaño:</span>
-                        </div>
-                        <span className="text-gray-900 font-semibold"> empleados</span>
-                    </div>
-
-                    {/* Última actividad */}
-                    <div className="flex items-center justify-between pt-3">
-                        <div className="flex items-center gap-3">
-                            <Image src="/lastActivity.png" alt="Last Activity" width={24} height={24} />
-                            <span className="font-medium">Última actividad:</span>
-                        </div>
-                        
-                    </div>
-                </div>
-            </div>
-
-            {/* Estado del pipeline */}
-            <div className="bg-gradient-to-br from-white/70 to-white/90 backdrop-blur-xl p-6 rounded-2xl shadow-xl w-full border border-gray-200/60">
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    📊 Estado del Pipeline
-                </h2>
-                
-                
-            </div>
+  {/* BOTTOM */}
+  <div className="mt-10 rounded-lg shadow">
+      <div className="bg-gray-100 px-4 py-2 rounded-t-lg border-b border-gray-300 flex items-center justify-between">
+         <h2 className="text-lg font-semibold text-gray-700">Activities</h2> 
+        <Link href="/list/campaign" className="text-md font-semibold text-gray-700 ml-2 hover:underline">
+         View All
+        </Link>
+      </div>
+      <div className="bg-white p-4 rounded-b-lg">
+        <ActivityTable activities={activities} />
 
 
-            {/* Campañas en las que ha participado */}
-            <div className="bg-gradient-to-br from-white/70 to-white/90 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-gray-200/80">
-                <h2 className="text-xl font-bold text-gray-900 mb-5 flex items-center gap-2">
-                    📅 Historial de Interacciones
-                </h2>
-                
-                <div className="text-lg text-gray-800 flex flex-col gap-4">
-                    <div className="flex justify-between items-center border-b border-gray-300/40 py-3">
-                        <span className="flex items-center gap-3 text-gray-700 tracking-wide">
-                            📢 <span className="font-medium">Última Campaña:</span>
-                        </span>
-                        <span className="font-semibold text-gray-900"></span>
-                    </div>
 
-                    <div className="flex justify-between items-center border-b border-gray-300/40 py-3">
-                        <span className="flex items-center gap-3 text-gray-700 tracking-wide">
-                            🎟️ <span className="font-medium">Último Evento:</span>
-                        </span>
-                        <span className="font-semibold text-gray-900"></span>
-                    </div>
+      </div>
+    </div>
+</div>
+    
 
-                    <div className="flex justify-between items-center py-3">
-                        <span className="flex items-center gap-3 text-gray-700 tracking-wide">
-                            📈 <span className="font-medium">Último Lead:</span>
-                        </span>
-                        <span className="font-semibold text-gray-900"></span>
-                    </div>
-                </div>
-            </div>
-         </div>
-      </div> 
   )
 }
-export default SingleCampaignPage;
+export default SingleActivityPage;

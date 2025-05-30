@@ -1,83 +1,110 @@
 import prisma from "@/lib/prisma";
 import Image from "next/image";
 import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/card";
 
-const UserCardDirectorCom = async ({ type }: { type: "leads" | "conversion" | "ingresos" | "contactos" }) => {
+const UserCardDirectorCom = async ({
+  type,
+}: {
+  type: "activities" | "leads" | "accounts" | "contacts" | "pipeline";
+}) => {
   let data: number | string = 0;
 
-  // Función para formatear el número
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 2, // Para asegurar dos decimales
-      maximumFractionDigits: 2, // Para asegurar dos decimales
+    return new Intl.NumberFormat("es-ES", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(value);
   };
 
-  if (type === "conversion") {
-    // Contar campañas creadas
-    const totalCampaigns = await prisma.campaign.count();
-
-    // Contar leads que provienen de campañas
-    const totalLeads = await prisma.lead.count({
-      where: {
-        campaignId: { not: null } // Solo leads vinculados a campañas
-      }
-    });
-
-    // Evitar división por cero
-    const conversionRate = totalCampaigns > 0 ? (totalLeads / totalCampaigns) * 100 : 0;
-
-    // Redondear la tasa de conversión a un número entero
-    data = Math.round(conversionRate) + "%";
-  } else {
-    // Definición de modelMap
-    const modelMap = {
-      leads: () => prisma.lead.count(),
-      ingresos: async () => {
-        const result = await prisma.lead.aggregate({
-          _sum: {
-            value: true, // Sumar los valores de la columna "value"
-          },
-        });
-
-        // El resultado de la agregación es un objeto que contiene _sum, por lo que accedemos a _sum.value
-        // Si no hay ningún valor, devolvemos 0
-        const totalValue = result._sum.value ?? 0;
-        
-        // Formateamos el valor como EUR con separador de miles y 2 decimales
-        return formatCurrency(totalValue);
+  // Obtener la última actividad, tipo y asistentes
+  const getLastActivity = async () => {
+    const lastActivity = await prisma.activity.findFirst({
+      orderBy: {
+        date: "desc", // Ordena por fecha descendente para obtener la última actividad
       },
-      contactos: () => prisma.contact.count(),
-    } as const;
+      select: {
+        type: true, // Tipo de actividad
+        attendees: true, // Número de asistentes
+        date: true, // Fecha de la actividad
+      },
+    });
+    return lastActivity;
+  };
 
-    // Llamar al modelo correspondiente y asegurar que la variable data sea un número
+  // Mapa de modelos para manejar diferentes tipos
+  const modelMap = {
+    activities: async () => {
+      const lastActivity = await getLastActivity();
+      return lastActivity
+        ? `${lastActivity.type} - ${lastActivity.attendees} Attendees`
+        : "No Activities";
+    },
+    leads: async () => prisma.lead.count(),
+    accounts: async () => prisma.company.count(),
+    contacts: async () => prisma.contact.count(),
+    pipeline: async () => {
+      const result = await prisma.lead.aggregate({
+        _sum: { value: true },
+      });
+      return formatCurrency(result._sum.value ?? 0);
+    },
+  } as const;
+
+  try {
+    // Obtener los datos según el tipo
     data = await modelMap[type]();
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  } finally {
+    // Desconectar siempre al finalizar las operaciones
+    await prisma.$disconnect();
   }
 
-  // Definir el enlace dinámico
+  // Mapa de etiquetas para mostrar el nombre adecuado
+  const labelMap = {
+    activities: "Activities",
+    leads: "Leads",
+    accounts: "Accounts",
+    contacts: "Contacts",
+    pipeline: "Pipeline",
+  };
+
+  const currentYear = new Date().getFullYear();
+
   const linkHref = `/director_comercial/details/${type}`;
 
   return (
-    <div className="rounded-2xl odd:bg-lamaPurple even:bg-lamaSky p-4 flex-1 min-w-[130px]">
-      <div className="flex justify-between items-center">
-        <span className="text-[10px] bg-white px-2 py-1 rounded-full text-green-600">
-          2024/25
-        </span>
-        <Link href={linkHref}>
-          <Image 
-            src="/more.png" 
-            alt="" 
-            width={20} 
-            height={20} 
-            className="cursor-pointer" 
+    <Card className="py-2 px-3 flex gap-4 w-[24%] flex-1 min-w-[220px] h-[180px] relative bg-white shadow-md">
+      <CardContent className="flex flex-col gap-3 p-0">
+        <h1 className="text-sm text-gray-700 font-semibold text-left w-full">
+          {labelMap[type]}
+        </h1>
+        <h1 className="text-sm text-gray-400 font-semibold text-left w-full flex items-center space-x-2">{data}</h1>
+        
+        {/* Mostrar el año actual */}
+        <div className="text-sm mt-2 bg-blue-700 text-center text-white font-semibold rounded-full hover:bg-slate-400 inline-block px-2 py-1">
+          {currentYear}
+        </div>
+
+        <div className="absolute right-4 bottom-6">
+          <Image
+            src="/logo.png"
+            alt="Logo"
+            width={48}
+            height={48}
+            className="rounded-full border-2 border-white"
           />
-        </Link>  
+        </div>
+      </CardContent>
+
+      <div className="absolute bottom-0 left-0 w-full h-[8px] flex rounded-xl overflow-hidden">
+        <div className="w-[70%] h-full bg-[#6900EE]"></div>
+        <div className="w-[30%] h-full bg-black"></div>
       </div>
-      <h1 className="text-2xl font-semibold my-4 text-white">{data}</h1>
-      <h2 className="capitalize text-sm font-medium text-white">{type}</h2>
-    </div>
+    </Card>
   );
 };
 

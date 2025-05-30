@@ -12,7 +12,7 @@ const prisma = new PrismaClient();
 
 const TablePlayerCampaigns = async ({ playerId }: { playerId: string }) => {
   // Obtener campañas en las que el jugador está involucrado
-  const campaigns = await prisma.campaign.findMany({
+  const campaigns = await prisma.activity.findMany({
     where: {
       players: {
         some: { id: playerId }, // Filtra campañas donde el jugador está asignado
@@ -51,7 +51,7 @@ const TablePlayerCampaigns = async ({ playerId }: { playerId: string }) => {
                 <TableRow key={campaign.id} className="hover:bg-gray-200 transition-all duration-200">
                   <TableCell className="py-3 px-6 text-gray-900 font-medium">{campaign.name}</TableCell>
                   <TableCell className="py-3 px-6 text-gray-800">{campaign.date.toLocaleDateString()}</TableCell>
-                  <TableCell className="py-3 px-6 text-gray-800">{campaign.status.replace(/_/g, " ")}</TableCell>
+                  
                   <TableCell className="py-3 px-6 text-gray-800">{campaign.type.replace(/_/g, " ")}</TableCell>
                 </TableRow>
               ))

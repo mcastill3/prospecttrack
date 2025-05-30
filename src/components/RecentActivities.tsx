@@ -4,22 +4,18 @@ const prisma = new PrismaClient();
 
 const RecentActivities = async () => {
   // Obtener actividades desde la base de datos
-  const campaigns = await prisma.campaign.findMany({
+  const campaigns = await prisma.activity.findMany({
     select: { id: true, name: true, date: true },
     orderBy: { date: "desc" },
     take: 3,
   });
 
-  const events = await prisma.event.findMany({
-    select: { id: true, name: true, date: true },
-    orderBy: { date: "desc" },
-    take: 3,
-  });
+  
 
   // Formatear datos antes de renderizar
   const activities = [
     ...campaigns.map((c) => ({ id: c.id, name: c.name, type: "Campaña", date: c.date.toISOString().split("T")[0] })),
-    ...events.map((e) => ({ id: e.id, name: e.name, type: "Evento", date: e.date.toISOString().split("T")[0] })),
+    
   ].sort((a, b) => (a.date > b.date ? -1 : 1)); // Ordenar por fecha descendente
 
   return (

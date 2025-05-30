@@ -1,154 +1,130 @@
-import FormContainer from '@/components/FormContainer';
-import FormModal from '@/components/FormModal';
+import ActivityFilter from '@/components/Filters/ActivityFilter';
 import Pagination from '@/components/Pagination';
-import Table from '@/components/Table';
-import TableSearch from '@/components/TableSearch';
-import { role } from '@/lib/data';
-import prisma from '@/lib/prisma';
+import ActivityTable from '@/components/Tables/ActivityTable';
 import { ITEM_PER_PAGE } from '@/lib/settings';
-import { Campaign, Cost, Lead, Partner, Player, Prisma } from '@prisma/client';
-import Image from 'next/image';
-import Link from 'next/link';
-import React from 'react';
+import { ActivityType, ExecutionStatus } from '@prisma/client';  // Asegúrate de importar los tipos correctos
+import prisma from '@/lib/prisma';
+import ActivityFormCreate from '@/components/forms/Modal/ActivityFormCreate';
 
-type CampaignList = Campaign & {
-  players: Player[];
-  leads: Lead[];
-  sponsors: Partner[];
-  cost: Cost | null;
-};
 
-const columns = [
-  { header: "Campaign", accessor: "info" },
-  { header: "Scheduled", accessor: "date", className: "hidden md:table-cell" },
-  { header: "Participants", accessor: "targetContacts", className: "hidden lg:table-cell" },
-  { header: "Type", accessor: "type", className: "hidden md:table-cell" },
-  { header: "Cost", accessor: "cost", className: "hidden md:table-cell" },
-  { header: "Actions", accessor: "action" },
-];
+const ActivityListPage = async ({
+  searchParams,
+}: {
+  searchParams: { [key: string]: string | undefined };
+}) => {
+  const page = parseInt(searchParams.page || '1', 10);
+  const startIndex = (page - 1) * ITEM_PER_PAGE;
 
-const renderRow = (item: CampaignList) => (
-  <tr key={item.id} className="border-b border-gray-200 even:bg-slate-50 text-sm hover:bg-lamaPurple1Light">
-    <td className="flex items-center gap-4 p-4">
-      <div className="flex flex-col">
-        <h3 className="font-semibold">{item.name}</h3>
-      </div>
-    </td>
-    <td className="hidden md:table-cell">
-      {item.date ? item.date.toLocaleString() : "N/A"}
-    </td>
-    <td className="hidden md:table-cell">
-      <div className="flex flex-col">
-        {item.targetContacts}
-      </div>
-    </td>
-    <td className="hidden md:table-cell">{item.type.replace(/_/g, " ")}</td>
+  // Convertir los parámetros a los tipos correctos de las enumeraciones
+  const type = searchParams.type ? (searchParams.type as ActivityType) : undefined;
+  const status = searchParams.status ? (searchParams.status as ExecutionStatus) : undefined;
+  const areaId = searchParams.areaId;
+  const rawStartDate = searchParams.startDate;
+  const rawEndDate = searchParams.endDate;
+  const startDate = rawStartDate ? new Date(rawStartDate) : undefined;
+  const endDate = rawEndDate ? new Date(rawEndDate) : undefined;
 
-    <td className="hidden md:table-cell">{item.cost?.amount}</td>
-    <td>
-      <div className="flex items-center gap-2">
-        <Link href={`/list/campaign/${item.id}`}>
-          <button className="w-7 h-7 flex items-center justify-center rounded-full bg-lamaBlue">
-            <Image src="/view.png" alt="" width={16} height={16} />
-          </button>
-        </Link>
-        {role === "admin" && (
-          <>
-            <FormContainer table="campaign" type="update" id={item.id} />            
-            <FormContainer table="campaign" type="delete" id={item.id} />
-          </>  
-        )}
-      </div>
-    </td>
-  </tr>
-);
-
-const CampaignListPage = async ({ searchParams }: { searchParams: { [key: string]: string | undefined } }) => {
-  const { page, ...queryParams } = searchParams;
-  const p = page ? parseInt(page) : 1;
-
-  // URL PARAMS CONDITION
-  
-  const query: Prisma.CampaignWhereInput = {};
-  if (queryParams) {
-    for (const [key, value] of Object.entries(queryParams)) {
-      if (value !== undefined) {
-        switch (key) {
-          case "playerId":
-            query.players = {
-              some: {
-                id: value,
-              },
-            };
-            break;
-          case "playername":
-            // Si ya existe un filtro para players, combinamos los filtros utilizando "OR"
-            if (query.players) {
-              query.players = {
-                some: {
-                  OR: [
-                    { id: value }, // Filtro por ID
-                    { name: { contains: value, mode: "insensitive" } }, // Filtro por nombre
-                  ],
-                },
-              };
-            } else {
-              query.players = {
-                some: {
-                  name: { contains: value, mode: "insensitive" },
-                },
-              };
-            }
-            break;
-          case "search":
-            query.name = { contains: value, mode: "insensitive" };
-            break;
-          default:
-            break;
-        }
-      }
-    }
-  }
-    
-  const [data, count] = await prisma.$transaction([
-    prisma.campaign.findMany({
-      where: query,
-      include: {
-        cost: { select: { amount: true } },
-        players: { select: { id: true, name: true, surname: true } },
-        sponsors: { select: { id: true, name: true } },
-        leads: { select: { id: true, name: true } },
+  // Consulta a la base de datos con filtros dinámicos
+  const [activities, totalCount] = await Promise.all([
+    prisma.activity.findMany({
+      where: {
+        
+        ...(type && { type }),
+        ...(type && { type }),  // Filtro por tipo de actividad (usando ActivityType enum)
+        ...(status && { status }),  // Filtro por estado (usando ExecutionStatus enum)
+        ...(areaId && { areaId }),  // Filtro por área
+        ...(startDate && endDate && {
+          date: {
+            gte: startDate,
+            lte: endDate,
+          }
+        }),
+        ...(startDate && !endDate && {
+          date: {
+            gte: startDate,
+          }
+        }),
+        ...(endDate && !startDate && {
+          date: {
+            lte: endDate,
+          }
+        }),
       },
+      include: {
+        leads: {
+          select: {
+            id: true,
+            name: true,
+            value: true,
+            accountManager: {
+              select: {
+                firstName: true,
+                lastName: true,
+              },
+            },
+            contact: {
+              select: {
+                firstName: true,
+                lastName: true,
+                jobTitle: true,
+              },
+            },
+            company: {
+              select: {
+                id: true,
+                name: true,
+                revenue: true,
+              },
+            },
+          },
+        },
+         area: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        cost: {
+          select: {
+            id: true,
+            name: true,
+            amount: true,
+            currency: true,
+          },
+        },
+      },
+      skip: startIndex,
       take: ITEM_PER_PAGE,
-      skip: ITEM_PER_PAGE * (p - 1),
+      orderBy: { date: 'desc' },
     }),
-    prisma.campaign.count({ where: query }),
+    prisma.activity.count({
+      where: {
+        ...(type && { type }),  // Filtro por tipo de actividad (usando ActivityType enum)
+        ...(status && { status }),
+        ...(areaId && { areaId }),
+        ...(startDate && { date: { gte: startDate } }),
+        ...(endDate && { date: { lte: endDate } }),
+      },
+    }),
   ]);
 
+  const areas = await prisma.area.findMany({
+    select: { id: true, name: true },
+  });
+
   return (
-    <div className="bg-white p-4 rounded-md flex-1 m-4 mt-0 h-full">
-      {/* TOP */}
-      <div className="flex items-center justify-between">
-        <h1 className="hidden md:block text-lg font-semibold">Campaigns</h1>
-        <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-          <TableSearch />
-          <div className="flex items-center gap-4 self-end">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/filter.png" alt="" width={14} height={14} />
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-lamaYellow">
-              <Image src="/sort.png" alt="" width={14} height={14} />
-            </button>
-            <FormModal table="campaign" type="create" />
-          </div>
-        </div>
+    <div className="mt-10 rounded-lg shadow">
+      <ActivityFilter areas={areas} totalCount={totalCount} />
+      <div className="bg-gray-100 px-4 py-2 rounded-t-lg border-b border-gray-300 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-700">Activities</h2>
+          <ActivityFormCreate selectedContactIds={[]} />
       </div>
-      {/* LIST */}
-      <Table columns={columns} renderRow={renderRow} data={data} />
-      {/* PAGINATION */}
-      <Pagination page={p} count={count} />
+      <div className="bg-white p-4 rounded-b-lg">
+        <ActivityTable activities={activities} />
+        <Pagination page={page} count={totalCount} />
+      </div>
     </div>
   );
 };
 
-export default CampaignListPage;
+export default ActivityListPage;
