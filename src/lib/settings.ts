@@ -20,6 +20,7 @@ type RouteAccessMap = {
     "/list/organizations": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
     "/list/partner": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
     "/list/contact": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
+    "/list/accountManager": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
     "/list/player": ["admin", "analista_marketing", "digital_sales", "director_comercial", "director_marketing"],
     "/list/ciclos": ["admin", "marketing", "comercial", "analista", "director_comercial", "director_marketing"],
     "/list/flujos": ["admin", "director_marketing"],

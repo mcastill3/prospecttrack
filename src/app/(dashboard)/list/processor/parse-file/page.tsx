@@ -86,6 +86,12 @@ const ParsingFilePage: React.FC = () => {
 
           usedEmails.add(email);
 
+          // ** Aquí rellenas la columna "type" si está vacía **
+            let typeValue = row['type'] || ''; // toma valor actual o vacío
+            if (!typeValue.trim()) {
+              typeValue = 'PROSPECT';
+            }
+
           return {
             ...row,
             email,
@@ -93,6 +99,7 @@ const ParsingFilePage: React.FC = () => {
             size: normalizedSize,
             revenue: normalizedRevenue,
             jobTitle: normalizedJobTitle,
+            type: typeValue,
           };
         });
 

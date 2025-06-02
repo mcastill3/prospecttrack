@@ -200,3 +200,13 @@ export const activitySchema = z.object({
 });
 
 export type ActivityFormData = z.infer<typeof activitySchema>;
+
+export const accountManagerSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  areaId: z.string().min(1, "Area is required"),
+  countryId: z.string().optional(),
+  cityId: z.string().optional(),
+});
+
+export type AccountManagerFormData = z.infer<typeof accountManagerSchema>;

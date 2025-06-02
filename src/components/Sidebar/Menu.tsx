@@ -47,6 +47,12 @@ const menuItems = [
           visible: ["admin", "comercial", "director_comercial"],
         },
         {
+          icon: faFlag,
+          label: "Account Managers",
+          href: "/list/accountManager",
+          visible: ["admin", "director_comercial"],
+        },
+        {
           icon: faFileLines,
           label: "Reports",
           href: "/list/contact",
@@ -93,6 +99,12 @@ const menuItems = [
           icon: faAddressBook,
           label: "Contacts",
           href: "/list/contact",
+          visible: ["admin", "director_marketing"],
+        },
+        {
+          icon: faFlag,
+          label: "Account Managers",
+          href: "/list/accountManager",
           visible: ["admin", "director_marketing"],
         },
         {
@@ -163,6 +175,12 @@ const menuItems = [
           visible: ["admin", "analista_marketing"],
         },
         {
+          icon: faFlag,
+          label: "Account Managers",
+          href: "/list/accountManager",
+          visible: ["admin", "analista_marketing"],
+        },
+        {
           icon: faBookmark,
           label: "Tracking",
           href: "/list/lead",
@@ -222,6 +240,12 @@ const menuItems = [
           icon: faAddressBook,
           label: "Contacts",
           href: "/list/contact",
+          visible: ["admin", "digital_sales"],
+        },
+        {
+          icon: faFlag,
+          label: "Account Managers",
+          href: "/list/accountManager",
           visible: ["admin", "digital_sales"],
         },
         {
